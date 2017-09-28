@@ -4,18 +4,21 @@ CXX=g++
 SRC=$(filter-out mainParent.cpp,$(wildcard *.cpp))
 STATIC_OBJ=$(SRC:%.cpp=%.o)
 CFLAGS+=-O3
-CXXFLAGS+=-O3
+CXXFLAGS+=-std=c++11
 INC_PATH=-I.
 
 
 .PHONY:
-all: mainParent ChildA
+all: mainParent ChildA ChildB
 
 mainParent : mainParent.cpp
-	$(CXX) -o $@ $<
+	$(CXX) $(CXXFLAGS) -o $@ $<
 
 ChildA : childA.cpp
-	$(CXX) -o $@ $<
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
+ChildB : childB.cpp
+	$(CXX) $(CXXFLAGS) -o $@ $<
 
 clean :
-	rm mainParent ChildA
+	rm mainParent ChildA ChildB
