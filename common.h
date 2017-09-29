@@ -1,9 +1,14 @@
 #ifndef __COMMON__
 #define __COMMON__
+#include <iostream>
+#include <string.h>
+#include <unistd.h>
+#include <csignal>
 #include <sys/shm.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
-#include <iostream>
+#include <sys/sem.h>
+#include <sys/types.h>
 
 using namespace std;
 
@@ -18,10 +23,15 @@ key_t M_SEM_KEY = 33444;
 key_t LOG1_SEM_KEY = 22344;
 key_t LOG2_SEM_KEY = 22333;
 
+union semun {
+    int val;
+    struct semid_ds *buf;
+    ushort *array;
+}arg;
+
 void sem_wait(int& semid) {
     struct sembuf sb = {0, -1, 0};
     if (semop(semid, &sb, 1) == -1) {
-	cerr << "[manParent] lock failed" << endl;
 	exit(1);
     }
 }

@@ -1,14 +1,7 @@
-#include <csignal>
 #include <cstdlib>
-#include <unistd.h>
-#include <string.h>
-#include <stdio.h>
 #include <vector>
 #include <algorithm>
 #include <iomanip>
-#include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/sem.h>
 #include "common.h"
 
 int main() {
@@ -34,8 +27,7 @@ int main() {
 	exit(1);
     }
 
-    cout << "[ChildA] ChildA Process started" << endl;
-    fflush(stdout);
+    cout << unitbuf << "[ChildA] ChildA Process started" << endl;
     sem_signal(semidL1);
 
     while(true) {
@@ -54,15 +46,16 @@ int main() {
 	for(const auto& i:input) {
 	    cout << i << " ";
 	}
+	cout << endl;
+
 	sort(input.begin(), input.end());
 	if (1 == (inputSize % 2)) {
 	    result = input.at(inputSize/2);
 	} else {
 	    result = ((double)(input.at((inputSize/2)-1)) + (double)input.at(inputSize/2)) / 2;
 	}
-	cout << endl;
+
 	cout << "[ChildA] Median : " << fixed << setprecision(8) << result << endl;
-	fflush(stdout);
 	sem_signal(semidB);
 
     }

@@ -1,16 +1,18 @@
-#include <csignal>
 #include <cstdlib>
-#include <unistd.h>
-#include <string.h>
-#include <stdio.h>
 #include <vector>
 #include <algorithm>
 #include <iomanip>
-#include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/sem.h>
 #include <sys/stat.h>
 #include "common.h"
+
+void* getShm() {
+    int shmid;
+    if (0 > (shmid = shmget(SHM_KEY, SHM_MAX_SIZE, 0666 | S_IRUSR))) {
+	cerr << "[ChildB] get shm failed" << endl;
+	exit(1);
+    }
+    return shmat(shmid, 0, 0);
+}
 
 int main() {
     int semidA, semidB, semidM, semidL1, semidL2;
@@ -40,16 +42,12 @@ int main() {
 	exit(1);
     }
 
+    int *array = (int *)getShm();
+
     sem_wait(semidL1);
-    cout << "[ChildB] ChildB Process started" << endl;
-    fflush(stdout);
+    cout << unitbuf << "[ChildB] ChildB Process started" << endl;
     sem_signal(semidL2);
 
-    if (0 > (shmid = shmget(SHM_KEY, SHM_MAX_SIZE, 0666 | S_IRUSR))) {
-	cerr << "[ChildB] get shm failed" << endl;
-	exit(1);
-    }
-    int* array = (int *)shmat(shmid, 0, 0);
 
     while(true) {
 	sem_wait(semidB);
@@ -61,22 +59,24 @@ int main() {
 	for (int i = 0 ; i < inputSize ; ++i) {
 	    input.push_back(array[i+1]);
 	}
+
 	cout << "[ChildB] Random Numbers Received From Shared Memory : ";
 	for(const auto& i : input) {
 	    cout << i << " ";
 	    geoProduct *= i;
 	}
-	sort(input.begin(), input.end());
 	cout << endl;
+
+	sort(input.begin(), input.end());
 	cout << "[ChildB] Sorted Sequence: ";
 	for(const auto& i : input) {
 	    cout << i << " ";
 	}
 	cout << endl;
+
 	cout << "[ChildB] Geometric Mean: ";
 	result = pow(geoProduct, 1/(double)inputSize);
 	cout << result << endl;
-	fflush(stdout);
 	sem_signal(semidM);
     }
     return 0;

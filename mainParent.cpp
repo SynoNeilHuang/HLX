@@ -1,22 +1,9 @@
 #include <stdlib.h>
-#include <vector>
-#include <unistd.h>
-#include <sys/mman.h>
-#include <sys/wait.h>
-#include <string.h>
 #include <errno.h>
 #include <csignal>
-#include <sys/sem.h>
-#include <sys/types.h>
-#include <sys/ipc.h>
 #include "common.h"
 
 int sema_init(int& semid, key_t &key, int nsem, int initValue) {
-    union semun {
-	int val;
-	struct semid_ds *buf;
-	ushort *array;
-    }arg;
 
     if ( -1 == (semid = semget(key, nsem, 0666 | IPC_CREAT))) {
 	cerr << "[mainParent] semget failed: " << strerror(errno) << endl;
@@ -33,6 +20,8 @@ int sema_init(int& semid, key_t &key, int nsem, int initValue) {
 int main() {
     int shmid = 0;
     int semidA, semidB, semidM, semidL1, semidL2;
+
+    cout << unitbuf << "[mainParent] Main Process Started" << endl;
 
     if ( 0 > sema_init(semidA, A_SEM_KEY, 1, 0)) {
 	cerr << "[mainParent] semaphore init failed" << endl;
@@ -58,28 +47,22 @@ int main() {
 	cerr << "[mainParent] semaphore init failed" << endl;
 	exit(1);
     }
-    cout << "[mainParent] Main Process Started" << endl;
 
+    int *array;
     shmid = shmget(SHM_KEY, SHM_MAX_SIZE * sizeof(int), IPC_CREAT);
-
     if (shmid < 0) {
 	cout << "[mainParent] shm failed : " << errno << endl;
 	exit(1);
     }
-
-    int *array;
     array = (int *)shmat(shmid, 0, 0);
 
     int PipeFd[2];
-
     if (pipe(PipeFd)) {
 	cerr << "[mainParent] Data Pipe create failed!!";
 	exit(1);
     }
 
-    int input = 0;
     cout << "[mainParent] ChildA Process Created" << endl;
-    fflush(stdout);
     pid_t a_pid = fork();
     switch(a_pid) {
 	case -1: {
@@ -100,8 +83,8 @@ int main() {
 		     break;
 		 }
     }
+
     cout << "[mainParent] ChildB Process Created" << endl;
-    fflush(stdout);
     pid_t b_pid = fork();
     switch(b_pid) {
 	case -1: {
@@ -119,10 +102,12 @@ int main() {
 		     break;
 		 }
     }
+
     while (true) {
 
 	sem_wait(semidM);
 	sem_wait(semidL2);
+	int input = 0;
 	cout << "[mainParent] Enter a positive integer or 0 to exit : ";
 	cin >> input;
 	sem_signal(semidL2);
@@ -137,6 +122,7 @@ int main() {
 	    semctl(semidL1, 0, IPC_RMID, NULL);
 	    semctl(semidL2, 0, IPC_RMID, NULL);
 	    kill(a_pid, SIGTERM);
+	    kill(b_pid, SIGTERM);
 	    cout << "[mainParent] Process Exits" << endl;
 	    return 0;
 	} else if (0 > input) {
